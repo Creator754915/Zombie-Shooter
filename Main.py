@@ -2,13 +2,30 @@ from ursina import *
 from ursina.prefabs.first_person_controller import FirstPersonController
 from ursina.prefabs.health_bar import HealthBar
 import random
+import json
+
 
 app = Ursina()
 
+
+def splash_logo():
+    camera.overlay.color = color.black
+    logoaudio = Audio('assets/intro_audio.mp3', loop=False, autoplay=False)
+    logoaudio.play()
+    logo = Sprite(name='ursina_splash', parent=camera.ui, texture='pixel_studio', world_z=camera.overlay.z - 1, scale=.1,
+                  color=color.clear)
+    logo.animate_color(color.white, duration=7, delay=1, curve=curve.out_quint_boomerang)
+
+    camera.overlay.animate_color(color.clear, duration=2, delay=5)
+    destroy(logo, delay=6)
+
+
+window.title = 'Zombie Shooter'
 window.show_ursina_splash = False
 window.borderless = False
 window.exit_button.enabled = False
 window.fullscreen = False
+
 
 player = FirstPersonController()
 player.enabled = True
@@ -16,6 +33,7 @@ terrain = Entity(model=None, collider=None)
 Sky()
 
 music = ['music', 'music2']
+zombie = ['zombie_die', 'zombie_2', 'zombie_die3']
 
 gun = 'pistol'
 model_preview = 'pistol'
@@ -32,19 +50,10 @@ enemy = 0
 nmb_enemy = []
 money = 0
 bullets = 30
+kills = 0
 
-terrain_width = 35
-for n in range(terrain_width):
-    for k in range(terrain_width):
-        block = Entity(model='cube', color=color.green)
-        block.x = k
-        block.z = n
-        block.y = 1
-        block.parent = terrain
+terrains = Entity(model='level', texture='Image_7', scale=(1.2, 1.2), collider='mesh')
 
-terrain.combine()
-terrain.collider = 'mesh'
-terrain.texture = 'white_cube'
 
 weapon = Entity(model=gun,
                 parent=camera.ui,
@@ -60,7 +69,7 @@ HB1 = HealthBar(bar_color=color.lime.tint(-.25),
                 scale=(.6, .04),
                 position=(.22, .48))
 
-e1 = Entity(model='cube', position=(x, 2, z), color=color.red, scale=(.5, 2, .5), collider='box')
+e1 = Entity(model='zombie', position=(x, 2, z), color=color.red, scale=(.07, .07, .07), collider='box')
 e1.add_script(SmoothFollow(target=player, offset=[0, 1, 0], speed=0.2))
 
 wave_text = Text(text='Waves: ', position=(-.88, .48), scale=1.5)
@@ -79,6 +88,13 @@ reload = Audio(
     autoplay=False
 )
 
+zombie_die = Audio(
+    f'assets/sounds/zombie_die3.mp3',
+    loop=False,
+    autoplay=False,
+    volume=1
+)
+
 error = Audio(
     'assets/sounds/error.mp3',
     loop=False,
@@ -88,7 +104,8 @@ error = Audio(
 bg_music = Audio(
     f'assets/sounds/{random.choice(music)}.mp3',
     loop=True,
-    autoplay=False
+    autoplay=False,
+    volume=0.75
 )
 
 bg_music.play()
@@ -128,8 +145,8 @@ def waves():
     money += 10 * enemy
 
     for i in range(enemy):
-        x = random.randint(0, 35)
-        z = random.randint(0, 35)
+        x = random.randint(-138, 310)
+        z = random.randint(-148, 5)
         e2 = duplicate(e1, position=(x, 2, z), collider='box')
         nmb_enemy.append(e2)
 
@@ -324,6 +341,7 @@ def input(key):
                 nmb_enemy.remove(e2)
                 destroy(e2)
                 money += 1
+                zombie_die.play()
 
     if key == 'left mouse down' and bullets != 0 and player.enabled is True:
         bullets -= 1
@@ -403,13 +421,15 @@ def update():
     if held_keys['right mouse']:
         weapon.rotation = (0, 90, 5)
         weapon.position = (0, -.5)
+        camera.fov = 65
     else:
         weapon.rotation = (0, 75, 5)
         weapon.position = (.8, -.5)
+        camera.fov = 90
 
     if wave == 0:
         waves()
-    if wave == 15:
+    if wave == 20:
         print_on_screen('YOU WIN', scale=4, position=(0, 0), duration=4)
 
     if nmb_enemy == [] and wave != 0:
