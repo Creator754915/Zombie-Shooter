@@ -13,11 +13,12 @@ window.fullscreen = False
 player = FirstPersonController()
 player.enabled = True
 terrain = Entity(model=None, collider=None)
+Sky()
 
 music = ['music', 'music2']
 
-
 gun = 'pistol'
+model_preview = 'pistol'
 ak47 = False
 shotgun = False
 bullpup = False
@@ -67,25 +68,25 @@ money_text = Text(text='Money: ', position=(-.65, .48), scale=1.5)
 bullets_text = Text(text='Bullet: ', position=(-.35, .48), scale=1.5)
 
 fire = Audio(
-    'assets/fire.ogg',
+    'assets/sounds/fire.ogg',
     loop=False,
     autoplay=False
 )
 
 reload = Audio(
-    'assets/reload.waw',
+    'assets/sounds/reload.waw',
     loop=False,
     autoplay=False
 )
 
 error = Audio(
-    'assets/error.mp3',
+    'assets/sounds/error.mp3',
     loop=False,
     autoplay=False
 )
 
 bg_music = Audio(
-    f'assets/{random.choice(music)}.mp3',
+    f'assets/sounds/{random.choice(music)}.mp3',
     loop=True,
     autoplay=False
 )
@@ -222,22 +223,22 @@ def buy_menu():
             print_on_screen('''You don't have the money''', position=(-.15, .3), scale=1, duration=2)
 
     def preview_ak47():
-        global money, ak47
+        global money, ak47, model_preview
         model_preview = 'ak47'
         weapon_preview.model = model_preview
 
     def preview_shotgun():
-        global money, shotgun
+        global money, shotgun, model_preview
         model_preview = 'shotgun'
         weapon_preview.model = model_preview
 
     def preview_bullpup():
-        global money, bullpup
+        global money, bullpup, model_preview
         model_preview = 'bullpup'
         weapon_preview.model = model_preview
 
     def preview_machinegun():
-        global money, machinegun
+        global money, machinegun, model_preview
         model_preview = 'machinegun'
         weapon_preview.model = model_preview
 
@@ -270,11 +271,6 @@ def buy_menu():
     bullpup_btn.on_mouse_enter = preview_bullpup
     machinegun_btn.on_mouse_enter = preview_machinegun
 
-    ak47_btn.tooltip = Tooltip('Buy a AK47')
-    shotgun_btn.tooltip = Tooltip('Buy a SHOTGUN')
-    bullpup_btn.tooltip = Tooltip('Buy a BULLPUP')
-    machinegun_btn.tooltip = Tooltip('Buy a MACHINEGUN')
-
     ak47_btn.on_click = buy_ak47
     shotgun_btn.on_click = buy_shotgun
     bullpup_btn.on_click = buy_bullpup
@@ -302,7 +298,7 @@ def input(key):
     if key == 'r':
         if bullets == 0:
             reload.play()
-            bullets += 50 * wave
+            bullets += 20 * wave
 
     # Choose weapon
     if key == '1':
@@ -324,12 +320,12 @@ def input(key):
     # Shoot
     for e2 in nmb_enemy:
         if e2.hovered:
-            if key == 'left mouse down' and bullets != 0:
+            if key == 'left mouse down' and bullets != 0 and player.enabled is True:
                 nmb_enemy.remove(e2)
                 destroy(e2)
                 money += 1
 
-    if key == 'left mouse down' and bullets != 0:
+    if key == 'left mouse down' and bullets != 0 and player.enabled is True:
         bullets -= 1
         if gun == 'pistol':
             dust = Entity(model=Circle(),
@@ -391,15 +387,12 @@ def input(key):
             dust.fade_out(duration=0.05)
             fire.play()
 
-    else:
-        print_on_screen('RELOAD!', scale=2.5, duration=2)
-
 
 def update():
     global money, ak47, bullpup, machinegun, shotgun
-    enemy1_hit = e1.intersects(player)
+    hit_player = weapon.intersects()
 
-    if enemy1_hit.hit:
+    if hit_player.hit:
         HB1.value -= 10
 
     if held_keys['left mouse']:
