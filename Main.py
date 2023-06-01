@@ -1,18 +1,24 @@
 from ursina import *
 from ursina.prefabs.first_person_controller import FirstPersonController
 from ursina.prefabs.health_bar import HealthBar
+from Particles import *
+from ursina.curve import *
+from direct.actor.Actor import Actor
+from panda3d.core import TextNode
+from panda3d.core import Quat
+from math import degrees, atan2
 import random
+from math import pi, sin, cos
 import json
-
 
 app = Ursina()
 
 
 def splash_logo():
     camera.overlay.color = color.black
-    logoaudio = Audio('assets/intro_audio.mp3', loop=False, autoplay=False)
+    logoaudio = Audio('assets/sounds/intro_audio.mp3', loop=False, autoplay=False)
     logoaudio.play()
-    logo = Sprite(name='ursina_splash', parent=camera.ui, texture='pixel_studio', world_z=camera.overlay.z - 1, scale=.1,
+    logo = Sprite(name='ursina_splash', parent=camera.ui, texture='assets/icons/pixel_studio', world_z=camera.overlay.z - 1, scale=.1,
                   color=color.clear)
     logo.animate_color(color.white, duration=7, delay=1, curve=curve.out_quint_boomerang)
 
@@ -27,13 +33,18 @@ window.exit_button.enabled = False
 window.fullscreen = False
 
 
-player = FirstPersonController()
+player = FirstPersonController(collider='box')
 player.enabled = True
-terrain = Entity(model=None, collider=None)
+player.y = -1
+
+
+terrain = Entity(model='assets/models/level', scale=1.2, collider='box')
+floor = Entity(model='cube', scale=(88, 4, 88), position=(10, -2, 20), collider='box', color=color.red)
+floor.visible = False
+
 Sky()
 
 music = ['music', 'music2']
-zombie = ['zombie_die', 'zombie_2', 'zombie_die3']
 
 gun = 'pistol'
 model_preview = 'pistol'
@@ -42,8 +53,8 @@ shotgun = False
 bullpup = False
 machinegun = False
 
-x = 0
-z = 0
+x = 10
+z = 10
 
 wave = 0
 enemy = 0
@@ -51,8 +62,6 @@ nmb_enemy = []
 money = 0
 bullets = 30
 kills = 0
-
-terrains = Entity(model='level', texture='Image_7', scale=(1.2, 1.2), collider='mesh')
 
 
 weapon = Entity(model=gun,
@@ -65,16 +74,26 @@ weapon = Entity(model=gun,
                 )
 
 HB1 = HealthBar(bar_color=color.lime.tint(-.25),
-                roundness=.5,
+                roundness=0.2,
                 scale=(.6, .04),
-                position=(.22, .48))
+                position=(-.78, -.43))
 
-e1 = Entity(model='zombie', position=(x, 2, z), color=color.red, scale=(.07, .07, .07), collider='box')
+e1 = Entity(model='assets/models/zombie', position=(x, 0, z), scale=(1, 1, 1), collider='box')
 e1.add_script(SmoothFollow(target=player, offset=[0, 1, 0], speed=0.2))
+enemy_health = Entity(parent=e1, y=1.7, model='cube', color=color.red, world_scale=(1.3, .08, .08))
+
+actor = Actor("assets/animation/attack.gltf")
+actor.reparentTo(e1)
+actor.loop('run')
 
 wave_text = Text(text='Waves: ', position=(-.88, .48), scale=1.5)
+wave_text.font = "assets/fonts/Audiowibe/Audiowibe.ttf"
+
 money_text = Text(text='Money: ', position=(-.65, .48), scale=1.5)
+money_text.font = "assets/fonts/Audiowibe/Audiowibe.ttf"
+
 bullets_text = Text(text='Bullet: ', position=(-.35, .48), scale=1.5)
+bullets_text.font = "assets/fonts/Audiowibe/Audiowibe.ttf"
 
 fire = Audio(
     'assets/sounds/fire.ogg',
@@ -128,13 +147,20 @@ def GameOver():
     enemy = 0
     money = 0
 
-    print_on_screen('Game Over', scale=4, duration=2)
-
     HB1.value = 100
 
-    player.y = 5
-    player.x = random.randint(0, 35)
-    player.z = random.randint(0, 35)
+    camera.overlay.color = color.black
+    logo_gameover = Sprite(name='ursina_splash', parent=camera.ui, texture='assets/icons/Game_Over', world_z=camera.overlay.z - 1, scale=.1,
+                  color=color.clear)
+    logo_gameover.animate_color(color.white, duration=2, delay=1, curve=curve.out_quint_boomerang)
+    camera.overlay.animate_color(color.clear, duration=1, delay=4)
+    destroy(logo_gameover, delay=5)
+
+    def splash_input(key):
+        destroy(logo_gameover)
+        camera.overlay.animate_color(color.clear, duration=.25)
+
+    logo_gameover.input = splash_input
 
 
 def waves():
@@ -145,9 +171,10 @@ def waves():
     money += 10 * enemy
 
     for i in range(enemy):
-        x = random.randint(-138, 310)
-        z = random.randint(-148, 5)
-        e2 = duplicate(e1, position=(x, 2, z), collider='box')
+        x = random.randint(-19, 41)
+        z = random.randint(-12, 53)
+        e2 = duplicate(e1, position=(x, 0, z), collider='box')
+        enemy_health = Entity(parent=e2, y=1.7, model='cube', color=color.red, world_scale=(1.3, .08, .08))
         nmb_enemy.append(e2)
 
 
@@ -167,12 +194,15 @@ def pause():
 
     resume_btn = Button(text='Resume', color=color.gray, highlight_color=color.light_gray, scale=(.2, .1),
                         position=(0, .15))
+    resume_btn.text_entity.font = "assets/fonts/Audiowibe/Audiowibe.ttf"
 
     option_btn = Button(text='Option', color=color.gray, highlight_color=color.light_gray, scale=(.2, .1),
                         position=(0, 0))
+    option_btn.text_entity.font = "assets/fonts/Audiowibe/Audiowibe.ttf"
 
     quit_btn = Button(text='Quit', color=color.gray, highlight_color=color.light_gray, scale=(.2, .1),
                       position=(0, -.15))
+    quit_btn.text_entity.font = "assets/fonts/Audiowibe/Audiowibe.ttf"
 
     resume_btn.enabled = True
     option_btn.enabled = True
@@ -205,6 +235,9 @@ def buy_menu():
             ak47 = True
             money -= 850
             print_on_screen('You buy a ak47', position=(-.15, .3), scale=2, duration=2)
+        elif ak47 is True:
+            error.play()
+            print_on_screen('''You have the weapon''', position=(-.15, .3), scale=1, duration=2)
         else:
             error.play()
             print_on_screen('''You don't have the money''', position=(-.15, .3), scale=1, duration=2)
@@ -215,6 +248,9 @@ def buy_menu():
             shotgun = True
             money -= 1500
             print_on_screen('You buy a shotgun', position=(-.15, .3), scale=2, duration=2)
+        elif shotgun is True:
+            error.play()
+            print_on_screen('''You have the weapon''', position=(-.15, .3), scale=1, duration=2)
         else:
             error.play()
             print_on_screen('''You don't have the money''', position=(-.15, .3), scale=1, duration=2)
@@ -225,6 +261,9 @@ def buy_menu():
             bullpup = True
             money -= 2000
             print_on_screen('You buy a bullpup', position=(-.15, .3), scale=2, duration=2)
+        elif bullpup is True:
+            error.play()
+            print_on_screen('''You have the weapon''', position=(-.15, .3), scale=1, duration=2)
         else:
             error.play()
             print_on_screen('''You don't have the money''', position=(-.15, .3), scale=1, duration=2)
@@ -235,6 +274,9 @@ def buy_menu():
             machinegun = True
             money -= 4500
             print_on_screen('You buy a machinegun', position=(-.15, .3), scale=2, duration=2)
+        elif machinegun is True:
+            error.play()
+            print_on_screen('''You have the weapon''', position=(-.15, .3), scale=1, duration=2)
         else:
             error.play()
             print_on_screen('''You don't have the money''', position=(-.15, .3), scale=1, duration=2)
@@ -261,18 +303,23 @@ def buy_menu():
 
     ak47_btn = Button(text='Ak47', color=color.gray, highlight_color=color.light_gray, scale=(.2, .1),
                       position=(0, .15))
+    ak47_btn.text_entity.font = "assets/fonts/Audiowibe/Audiowibe.ttf"
 
     shotgun_btn = Button(text='Shotgun', color=color.gray, highlight_color=color.light_gray, scale=(.2, .1),
                          position=(0, 0))
+    shotgun_btn.text_entity.font = "assets/fonts/Audiowibe/Audiowibe.ttf"
 
     bullpup_btn = Button(text='Bullpup', color=color.gray, highlight_color=color.light_gray, scale=(.2, .1),
                          position=(0, -.15))
+    bullpup_btn.text_entity.font = "assets/fonts/Audiowibe/Audiowibe.ttf"
 
     machinegun_btn = Button(text='Machinegun', color=color.gray, highlight_color=color.light_gray, scale=(.2, .1),
                             position=(0, -.30))
+    machinegun_btn.text_entity.font = "assets/fonts/Audiowibe/Audiowibe.ttf"
 
     exit_btn = Button(text='Exit', color=color.gray, highlight_color=color.light_gray, scale=(.2, .1),
                       position=(0, -.45))
+    exit_btn.text_entity.font = "assets/fonts/Audiowibe/Audiowibe.ttf"
 
     weapon_preview = Entity(model=model_preview, color=color.red, position=(.2, 0))
 
@@ -337,11 +384,16 @@ def input(key):
     # Shoot
     for e2 in nmb_enemy:
         if e2.hovered:
+            e2_x = e2.x
+            e2_y = e2.y + .5
+            e2_z = e2.z
             if key == 'left mouse down' and bullets != 0 and player.enabled is True:
                 nmb_enemy.remove(e2)
                 destroy(e2)
-                money += 1
                 zombie_die.play()
+                money += 1
+                p = ParticleSystem(position=Vec3(e2_x, e2_y, e2_z), color=color.red, rotation_y=random.random() * 360)
+                p.fade_out(duration=.2, delay=1 - .2, curve=curve.linear)
 
     if key == 'left mouse down' and bullets != 0 and player.enabled is True:
         bullets -= 1
@@ -356,7 +408,6 @@ def input(key):
                                curve=curve.linear)
             dust.fade_out(duration=0.3)
             fire.play()
-
         if gun == 'ak47':
             dust = Entity(model=Circle(),
                           parent=camera.ui,
@@ -405,13 +456,14 @@ def input(key):
             dust.fade_out(duration=0.05)
             fire.play()
 
+    if key == 'shift':
+        camera.animate("fov", 120, duration=0.2, curve=curve.in_quad)
+        camera.animate("fov", 100, curve=curve.out_quad, delay=0.2)
+        player.animate_position(player.position + (camera.forward * 10), duration=0.2, curve=curve.in_out_quad)
+
 
 def update():
     global money, ak47, bullpup, machinegun, shotgun
-    hit_player = weapon.intersects()
-
-    if hit_player.hit:
-        HB1.value -= 10
 
     if held_keys['left mouse']:
         weapon.position = (.8, -.55)
@@ -420,12 +472,12 @@ def update():
 
     if held_keys['right mouse']:
         weapon.rotation = (0, 90, 5)
-        weapon.position = (0, -.5)
-        camera.fov = 65
+        weapon.position = lerp(weapon.position, Vec3(-.7, -.5, 0), curve.in_out_cubic(.5))
+        camera.fov = lerp(camera.fov, 62, .5)
     else:
         weapon.rotation = (0, 75, 5)
         weapon.position = (.8, -.5)
-        camera.fov = 90
+        camera.fov = lerp(camera.fov, 90, .5)
 
     if wave == 0:
         waves()
@@ -445,8 +497,17 @@ def update():
         player.x = random.randint(0, 35)
         player.z = random.randint(0, 35)
         damage(50)
+    if -3 < player.y < .3:
+        player.y = -1
     if HB1.value == 0:
         GameOver()
+
+    e1.lookAt(player)
+
+    for e2 in nmb_enemy:
+        e2.look_at_2d(player.position, axis='y')
+
+    print(player.position)
 
     wave_text.text = f'Waves: {wave}'
     money_text.text = f'Money: {money}'
