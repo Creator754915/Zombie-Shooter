@@ -1,6 +1,7 @@
 from ursina import *
 from ursina.prefabs.first_person_controller import FirstPersonController
 from ursina.prefabs.health_bar import HealthBar
+
 from Particles import *
 from ursina.curve import *
 from direct.actor.Actor import Actor
@@ -11,7 +12,7 @@ import random
 from math import pi, sin, cos
 import json
 
-app = Ursina()
+app = Ursina(size=(720, 460))
 
 
 def splash_logo():
@@ -124,7 +125,7 @@ bg_music = Audio(
     f'assets/sounds/{random.choice(music)}.mp3',
     loop=True,
     autoplay=False,
-    volume=0.75
+    volume=.75
 )
 
 bg_music.play()
@@ -146,6 +147,7 @@ def GameOver():
     z = 0
     enemy = 0
     money = 0
+    wave = 0
 
     HB1.value = 100
 
