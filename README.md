@@ -1,7 +1,18 @@
 ![No Preview :(](https://github.com/Creator754915/Zombie-Shooter/blob/main/Preview/Zombie_Shooter.png)
 
 # Description
-Zombie Shooter game create in python with Urisna
+Zombie Shooter game create in python with Urisna Engine
+
+The game have 3 game mode:
+  1) **History**
+  2) **Apocalyps**
+  3) **Multiplayer**
+
+The **History** game mode, is coming soon.
+
+And the **Apocalyps** mode is done, you can play in solo in the world.
+
+Multiplayer is in DEVELOPPEMENT
 
 ## Update
 **Beta-2.0.6**
