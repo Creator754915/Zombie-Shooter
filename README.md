@@ -37,9 +37,16 @@ Multiplayer game...
  ![No Preview :(](https://github.com/Creator754915/Zombie-Shooter/blob/main/Preview/shop.png)
 
 ## Keys
-1) ```B```: To open the shop
-2) ```P```: To pause the game
-3) ```R```: To reload the bullets
-4) ```SHIFT```: Forward dash
+<ul>
+      <li><strong>Z</strong> - Forward</li>
+      <li><strong>Q</strong> - Left</li>
+      <li><strong>S</strong> - Backward</li>
+      <li><strong>D</strong> - Right</li>
+      <li><strong>Left CLick</strong> - Fire</li>
+      <li><strong>Space</strong> - Jump</li>
+      <li><strong>R</strong> - Reload Bullets</li>
+      <li><strong>B</strong> - Shop</li>
+      <li><strong>Left Shift</strong> - Dash</li>
+    </ul>
 
 Game Version: **BETA-2.0.5**
