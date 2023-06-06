@@ -12,7 +12,7 @@ The **History** game mode, is coming soon.
 
 And the **Apocalyps** mode is done, you can play in solo in the world.
 
-Multiplayer is in DEVELOPPEMENT
+Multiplayer is in **DEVELOPPEMENT**
 
 ## Update
 **Beta-2.0.6**
