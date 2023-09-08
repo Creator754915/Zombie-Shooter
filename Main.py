@@ -1,17 +1,18 @@
 from ursina import *
+from ursina.prefabs.conversation import Conversation
 from ursina.prefabs.first_person_controller import FirstPersonController
 from ursina.prefabs.health_bar import HealthBar
-
+from ursina.prefabs.video_recorder import VideoRecorder
+from ursina.shaders import lit_with_shadows_shader, basic_lighting_shader
 from Particles import *
 from ursina.curve import *
 from direct.actor.Actor import Actor
 from panda3d.core import TextNode
 from panda3d.core import Quat
 from math import degrees, atan2
-import random
-from math import pi, sin, cos
-import json
+import random as rnd
 
+window.render_modes = 'colliders'
 app = Ursina(size=(720, 460))
 
 
@@ -38,14 +39,19 @@ player = FirstPersonController(collider='box')
 player.enabled = True
 player.y = -1
 
+# terrain = Entity(model='assets/models/level', scale=1.2, collider='box')
+floor = Entity(model='cube', texture='grass', scale=(88, 4, 88), position=(0, -2, 0), collider='box', color=color.brown)
 
-terrain = Entity(model='assets/models/level', scale=1.2, collider='box')
-floor = Entity(model='cube', scale=(88, 4, 88), position=(10, -2, 20), collider='box', color=color.red)
-floor.visible = False
+for obctable in range(20):
+    Entity(model="cube", color=color.rgb(rnd.randint(0, 255), rnd.randint(0, 255), rnd.randint(0, 255)),
+           scale=(rnd.randint(1, 3), rnd.randint(1, 3)),
+           x=rnd.randint(-44, 44),
+           z=rnd.randint(-44, 44),
+           collider="box")
 
 Sky()
 
-music = ['music', 'music2']
+music = ['music', 'music2', 'music3']
 
 gun = 'pistol'
 model_preview = 'pistol'
@@ -63,6 +69,7 @@ nmb_enemy = []
 money = 0
 bullets = 30
 kills = 0
+play = True
 
 
 weapon = Entity(model=gun,
@@ -79,13 +86,13 @@ HB1 = HealthBar(bar_color=color.lime.tint(-.25),
                 scale=(.6, .04),
                 position=(-.78, -.43))
 
-e1 = Entity(model='assets/models/zombie', position=(x, 0, z), scale=(1, 1, 1), collider='box')
-e1.add_script(SmoothFollow(target=player, offset=[0, 1, 0], speed=0.2))
-enemy_health = Entity(parent=e1, y=1.7, model='cube', color=color.red, world_scale=(1.3, .08, .08))
+enemy1 = Entity(model='assets/models/zombie', position=(x, 0, z), rotation=(0, 180, 0), scale=(1, 1, 1), visible=False)
+enemy1.add_script(SmoothFollow(target=player, offset=[0, 1, 0], speed=0.2))
+enemy_health = Entity(parent=enemy1, y=1.7, model='cube', color=color.red, world_scale=(1.3, .08, .08))
 
-actor = Actor("assets/animation/attack.gltf")
-actor.reparentTo(e1)
-actor.loop('run')
+# actor = Actor("assets/animation/attack.gltf")
+# actor.reparentTo(e1)
+# actor.loop('Armature.001|Armature|Attack')
 
 wave_text = Text(text='Waves: ', position=(-.88, .48), scale=1.5)
 wave_text.font = "assets/fonts/Audiowibe/Audiowibe.ttf"
@@ -125,7 +132,7 @@ bg_music = Audio(
     f'assets/sounds/{random.choice(music)}.mp3',
     loop=True,
     autoplay=False,
-    volume=.75
+    volume=0.7
 )
 
 bg_music.play()
@@ -140,8 +147,9 @@ def heal(value):
 
 
 def GameOver():
-    global gun, wave, enemy, money, x, z
+    global gun, wave, enemy, money, x, z, play
 
+    play = False
     gun = 'ak47'
     x = 0
     z = 0
@@ -151,9 +159,13 @@ def GameOver():
 
     HB1.value = 100
 
+    for e2 in nmb_enemy:
+        destroy(e2)
+
     camera.overlay.color = color.black
-    logo_gameover = Sprite(name='ursina_splash', parent=camera.ui, texture='assets/icons/Game_Over', world_z=camera.overlay.z - 1, scale=.1,
-                  color=color.clear)
+    logo_gameover = Sprite(name='ursina_splash', parent=camera.ui, texture='assets/icons/Game_Over',
+                           world_z=camera.overlay.z - 1, scale=.1,
+                           color=color.clear)
     logo_gameover.animate_color(color.white, duration=2, delay=1, curve=curve.out_quint_boomerang)
     camera.overlay.animate_color(color.clear, duration=1, delay=4)
     destroy(logo_gameover, delay=5)
@@ -163,6 +175,7 @@ def GameOver():
         camera.overlay.animate_color(color.clear, duration=.25)
 
     logo_gameover.input = splash_input
+    play = True
 
 
 def waves():
@@ -173,11 +186,11 @@ def waves():
     money += 10 * enemy
 
     for i in range(enemy):
-        x = random.randint(-19, 41)
-        z = random.randint(-12, 53)
-        e2 = duplicate(e1, position=(x, 0, z), collider='box')
-        enemy_health = Entity(parent=e2, y=1.7, model='cube', color=color.red, world_scale=(1.3, .08, .08))
-        nmb_enemy.append(e2)
+        x = random.randint(0, 80)
+        z = random.randint(0, 8)
+        enemy2 = duplicate(enemy1, position=(x, 0, z), visible=True, collider='box')
+        enemy_health = Entity(parent=enemy2, y=1.7, model='cube', color=color.red, world_scale=(1.3, .08, .08))
+        nmb_enemy.append(enemy2)
 
 
 def pause():
@@ -196,31 +209,24 @@ def pause():
 
     resume_btn = Button(text='Resume', color=color.gray, highlight_color=color.light_gray, scale=(.2, .1),
                         position=(0, .15))
-    resume_btn.text_entity.font = "assets/fonts/Audiowibe/Audiowibe.ttf"
 
     option_btn = Button(text='Option', color=color.gray, highlight_color=color.light_gray, scale=(.2, .1),
                         position=(0, 0))
-    option_btn.text_entity.font = "assets/fonts/Audiowibe/Audiowibe.ttf"
 
     quit_btn = Button(text='Quit', color=color.gray, highlight_color=color.light_gray, scale=(.2, .1),
                       position=(0, -.15))
-    quit_btn.text_entity.font = "assets/fonts/Audiowibe/Audiowibe.ttf"
 
     resume_btn.enabled = True
     option_btn.enabled = True
     quit_btn.enabled = True
 
-    resume_btn.tooltip = Tooltip('Resume the game')
     resume_btn.on_click = resume
-    option_btn.tooltip = Tooltip('Option menu')
     option_btn.on_click = option
-    quit_btn.tooltip = Tooltip('Quit the game')
     quit_btn.on_click = quit_game
 
 
 def buy_menu():
     player.enabled = False
-    model_preview = 'pistol'
 
     def exit_buy():
         player.enabled = True
@@ -229,7 +235,6 @@ def buy_menu():
         bullpup_btn.enabled = False
         machinegun_btn.enabled = False
         exit_btn.enabled = False
-        weapon_preview.visible = False
 
     def buy_ak47():
         global money, ak47
@@ -283,45 +288,21 @@ def buy_menu():
             error.play()
             print_on_screen('''You don't have the money''', position=(-.15, .3), scale=1, duration=2)
 
-    def preview_ak47():
-        global money, ak47, model_preview
-        model_preview = 'ak47'
-        weapon_preview.model = model_preview
-
-    def preview_shotgun():
-        global money, shotgun, model_preview
-        model_preview = 'shotgun'
-        weapon_preview.model = model_preview
-
-    def preview_bullpup():
-        global money, bullpup, model_preview
-        model_preview = 'bullpup'
-        weapon_preview.model = model_preview
-
-    def preview_machinegun():
-        global money, machinegun, model_preview
-        model_preview = 'machinegun'
-        weapon_preview.model = model_preview
-
     ak47_btn = Button(text='Ak47', color=color.gray, highlight_color=color.light_gray, scale=(.2, .1),
                       position=(0, .15))
     ak47_btn.text_entity.font = "assets/fonts/Audiowibe/Audiowibe.ttf"
 
     shotgun_btn = Button(text='Shotgun', color=color.gray, highlight_color=color.light_gray, scale=(.2, .1),
                          position=(0, 0))
-    shotgun_btn.text_entity.font = "assets/fonts/Audiowibe/Audiowibe.ttf"
 
     bullpup_btn = Button(text='Bullpup', color=color.gray, highlight_color=color.light_gray, scale=(.2, .1),
                          position=(0, -.15))
-    bullpup_btn.text_entity.font = "assets/fonts/Audiowibe/Audiowibe.ttf"
 
     machinegun_btn = Button(text='Machinegun', color=color.gray, highlight_color=color.light_gray, scale=(.2, .1),
                             position=(0, -.30))
-    machinegun_btn.text_entity.font = "assets/fonts/Audiowibe/Audiowibe.ttf"
 
     exit_btn = Button(text='Exit', color=color.gray, highlight_color=color.light_gray, scale=(.2, .1),
                       position=(0, -.45))
-    exit_btn.text_entity.font = "assets/fonts/Audiowibe/Audiowibe.ttf"
 
     weapon_preview = Entity(model=model_preview, color=color.red, position=(.2, 0))
 
@@ -330,12 +311,6 @@ def buy_menu():
     bullpup_btn.enabled = True
     machinegun_btn.enabled = True
     exit_btn.enabled = True
-    weapon_preview.visible = True
-
-    ak47_btn.on_mouse_enter = preview_ak47
-    shotgun_btn.on_mouse_enter = preview_shotgun
-    bullpup_btn.on_mouse_enter = preview_bullpup
-    machinegun_btn.on_mouse_enter = preview_machinegun
 
     ak47_btn.on_click = buy_ak47
     shotgun_btn.on_click = buy_shotgun
@@ -481,35 +456,40 @@ def update():
         weapon.position = (.8, -.5)
         camera.fov = lerp(camera.fov, 90, .5)
 
-    if wave == 0:
+    if wave == 0 and play is True:
         waves()
     if wave == 20:
         print_on_screen('YOU WIN', scale=4, position=(0, 0), duration=4)
 
-    if nmb_enemy == [] and wave != 0:
+    if nmb_enemy == [] and play is True:
         waves()
 
     if player.y < -5:
         player.y = 5
-        player.x = random.randint(0, 35)
-        player.z = random.randint(0, 35)
+        player.x = random.randint(0, 88)
+        player.z = random.randint(0, 88)
         damage(10)
     if player.y > 20:
         player.y = 5
-        player.x = random.randint(0, 35)
-        player.z = random.randint(0, 35)
+        player.x = random.randint(0, 88)
+        player.z = random.randint(0, 88)
         damage(50)
     if -3 < player.y < .3:
         player.y = -1
-    if HB1.value == 0:
+    if HB1.value == 0 or HB1.value < 0:
         GameOver()
 
-    e1.lookAt(player)
+    enemy1.look_at_2d(player, axis='y')
 
-    for e2 in nmb_enemy:
-        e2.look_at_2d(player.position, axis='y')
+    for enemy2 in nmb_enemy:
+        dist = distance_xz(player, enemy2)
+        from math import degrees, atan2
+        target = Vec3(player.world_position)
+        pos = target - enemy2.world_position
+        enemy2.rotation_y = degrees(atan2(pos[0], pos[2]))
 
-    print(player.position)
+        if dist < 1:
+            damage(5)
 
     wave_text.text = f'Waves: {wave}'
     money_text.text = f'Money: {money}'
