@@ -49,4 +49,4 @@ Multiplayer game...
       <li><strong>Left Shift</strong> - Dash</li>
     </ul>
 
-Game Version: **BETA-2.0.5**
+Game Version: **2.0**
