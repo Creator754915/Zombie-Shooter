@@ -12,6 +12,8 @@ from panda3d.core import Quat
 from math import degrees, atan2
 import random as rnd
 
+from sun import Sun
+
 window.render_modes = 'colliders'
 app = Ursina(size=(720, 460))
 
@@ -39,15 +41,17 @@ player = FirstPersonController(collider='box')
 player.enabled = True
 player.y = -1
 
-# terrain = Entity(model='assets/models/level', scale=1.2, collider='box')
-floor = Entity(model='cube', texture='grass', scale=(88, 4, 88), position=(0, -2, 0), collider='box', color=color.brown)
+floor = Entity(model='plane', texture='grass', scale=88, position=(0, 0, 0), collider="box", shader=lit_with_shadows_shader)
 
 for obctable in range(20):
     Entity(model="cube", color=color.rgb(rnd.randint(0, 255), rnd.randint(0, 255), rnd.randint(0, 255)),
            scale=(rnd.randint(1, 3), rnd.randint(1, 3)),
            x=rnd.randint(-44, 44),
+           y=rnd.randint(0, 4),
            z=rnd.randint(-44, 44),
            collider="box")
+
+sun = Sun(target=player)
 
 Sky()
 
@@ -78,13 +82,13 @@ weapon = Entity(model=gun,
                 color=color.gray,
                 texture='white_cube',
                 position=(.8, -.5),
-                rotation=(0, 75, 5)
+                rotation=(0, 75, 5),
                 )
 
 HB1 = HealthBar(bar_color=color.lime.tint(-.25),
                 roundness=0.2,
                 scale=(.6, .04),
-                position=(-.78, -.43))
+                position=(-.82, -.43))
 
 enemy1 = Entity(model='assets/models/zombie', position=(x, 0, z), rotation=(0, 180, 0), scale=(1, 1, 1), visible=False)
 enemy1.add_script(SmoothFollow(target=player, offset=[0, 1, 0], speed=0.2))
@@ -205,7 +209,25 @@ def pause():
         print_on_screen('Option', scale=3, duration=1)
 
     def quit_game():
-        application.quit()
+        import json
+        save_data = {
+                "stats": {
+                    "kills": kills,
+                    "max_waves": wave
+                },
+                "intro": False
+        }
+        with open('data.json') as f:
+            data = json.load(f)
+
+        if data["stats"]["kills"] > kills:
+            fs = open("data.json", "w")
+            fs.write(json.dumps(save_data))
+            fs.close()
+
+            application.quit()
+        else:
+            application.quit()
 
     resume_btn = Button(text='Resume', color=color.gray, highlight_color=color.light_gray, scale=(.2, .1),
                         position=(0, .15))
@@ -304,8 +326,6 @@ def buy_menu():
     exit_btn = Button(text='Exit', color=color.gray, highlight_color=color.light_gray, scale=(.2, .1),
                       position=(0, -.45))
 
-    weapon_preview = Entity(model=model_preview, color=color.red, position=(.2, 0))
-
     ak47_btn.enabled = True
     shotgun_btn.enabled = True
     bullpup_btn.enabled = True
@@ -320,7 +340,7 @@ def buy_menu():
 
 
 def input(key):
-    global gun, money, bullets
+    global gun, money, bullets, kills
     if key == '-' or key == '- hold':
         damage(5)
     if key == '+' or key == '+ hold':
@@ -368,7 +388,8 @@ def input(key):
                 nmb_enemy.remove(e2)
                 destroy(e2)
                 zombie_die.play()
-                money += 1
+                money += 2
+                kills += 1
                 p = ParticleSystem(position=Vec3(e2_x, e2_y, e2_z), color=color.red, rotation_y=random.random() * 360)
                 p.fade_out(duration=.2, delay=1 - .2, curve=curve.linear)
 
